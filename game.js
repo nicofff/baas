@@ -1,12 +1,16 @@
 
-function placeShips(ships,size){
+
+var battleship = {}
+
+function placeShips(game_ships,size){
+	var ships = game_ships.slice();
 	var used = [];
 	var shipPlacements = [];
 	while (ships.length !==0 ){
 		var placement = [];
 		var aborted = false;
 		var ship = ships.pop();
-		var placeVertically = Math.random > 0.5
+		var placeVertically = Math.random() > 0.5
 		var constrainedStart = Math.floor(Math.random()*(size-ship.size));
 		var unconstrainedStart = Math.floor(Math.random()*(size));
 		for (var i = 0;i<ship.size; i++){
@@ -89,8 +93,15 @@ var ships = [{
 	size: 2
 }];
 
-var board = placeShips(ships,10);
-var game = {board:board,hits:[]};
-game.playTurn = playTurn;
 
-module.exports = game
+battleship.start = function start(){
+	var game = {}
+	game.placeShips = placeShips;
+	game.playTurn  = playTurn;
+	var board = game.placeShips(ships,10);
+	game.board = board;
+	game.hists = [];
+	return game;
+}
+
+module.exports = battleship

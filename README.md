@@ -86,4 +86,5 @@ Return Codes:
 Placement rules:
 
 · Ships cannot overlap
+
 · Ships can be placed one right next to the other

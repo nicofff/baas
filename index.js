@@ -1,6 +1,6 @@
 var http = require('http');
 const PORT=8080; 
-
+var battleship = require("./game")
 var games = []
 
 //We need a function which handles requests and send response
@@ -13,7 +13,7 @@ function handleRequest(request, response){
         try{
             
             if (request.url == "/new"){
-                var gameID = games.push(require("./game")) -1
+                var gameID = games.push(battleship.new()) -1
                 response.end(JSON.stringify({status: 0, game_id:gameID}));
             }else if (request.url == "/turn"){
                 var data =JSON.parse(body);
