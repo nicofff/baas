@@ -11,7 +11,7 @@ function placeShips(game_ships,size){
 		var aborted = false;
 		var ship = ships.pop();
 		var placeVertically = Math.random() > 0.5
-		var constrainedStart = Math.floor(Math.random()*(size-ship.size));
+		var constrainedStart = Math.round(Math.random()*(size-ship.size));
 		var unconstrainedStart = Math.floor(Math.random()*(size));
 		for (var i = 0;i<ship.size; i++){
 			var location = (placeVertically ? [constrainedStart+i,unconstrainedStart] : [unconstrainedStart,constrainedStart+i]).join("");
