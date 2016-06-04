@@ -16,6 +16,17 @@ function pickRandomTile(tiles){
 	return tiles.splice(ri, 1)[0];
 }
 
+function pickRandomParTile(tiles){
+	while(true){
+		var ri = Math.floor(Math.random() * tiles.length); // Random Index position in the array
+		var tile = tiles[ri]
+		if ((parseInt(tile[0])+parseInt(tile[1]))%2 == 0){
+			return tiles.splice(ri, 1)[0];
+		}
+	}
+}
+
+
 function pickTile(remaining,played){
 	
 }
@@ -31,8 +42,6 @@ function generateTargets(remainingTiles,lastTile){ //TODO: Make tiles an array i
 }
 
 var allTiles = validTiles(10); //TODO don't hardcode size
-
-
 
 for (var i = 0; i < 100000; i++) {
 	var remainingTiles = allTiles.slice()
@@ -53,7 +62,7 @@ for (var i = 0; i < 100000; i++) {
 			var tile = pickRandomTile(targets)
 			remainingTiles.splice(remainingTiles.indexOf(tile),1)
 		}else{
-			var tile = pickRandomTile(remainingTiles);	
+			var tile = pickRandomParTile(remainingTiles);	
 		}
 		//console.log("tile",tile)
 		
