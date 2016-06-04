@@ -95,12 +95,14 @@ var ships = [{
 
 
 battleship.start = function start(){
-	var game = {}
+	var size = 10;
+	var game = {};
 	game.placeShips = placeShips;
 	game.playTurn  = playTurn;
-	var board = game.placeShips(ships,10);
+	var board = game.placeShips(ships,size);
 	game.board = board;
-	game.hists = [];
+	game.hits = [];
+	game.size = size;
 	return game;
 }
 
