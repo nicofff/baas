@@ -53,6 +53,9 @@ function pickRandomParTile(tiles){
 }
 
 function getMostLikelyTile(allPosiblePositions){
+	//console.log(allPosiblePositions)
+	allPosiblePositions = _.values(allPosiblePositions)
+	//console.log(allPosiblePositions)
 	allPosiblePositions = [].concat.apply([], allPosiblePositions)
 	//console.log(allPosiblePositions)
 	return _.chain(allPosiblePositions).countBy().pairs().max(_.last).head().value() // Will always return the top-lef-most tile if probability is the same on pmultiple tiles
@@ -75,18 +78,16 @@ function findAllPosiblePostions(remainingShipsSizes,remainingTiles){
 		});
 
 	});
-
-	return posiblePositions
+	return _.chain(posiblePositions).pairs().object().value()
 }
 
-function purgeImposiblePositions(posiblePositions,usedTiles,remainingShipsSizes){
+function purgeImposiblePositions(posiblePositions,tileIndex,tile){
 
-	return _.filter(posiblePositions,function(position){
-		if (remainingShipsSizes.indexOf(position.length)===-1){
-			return false
-		}
-		return _.intersection(position,usedTiles).length === 0 
+	var positionsToRemove = positionIndex[tile]
+	_.each(positionsToRemove,function(id){
+		delete posiblePositions[id]
 	})
+	return posiblePositions
 }
 
 
@@ -147,16 +148,31 @@ function generateTargets(remainingTiles,lastTile){ //TODO: Make tiles an array i
 
 }
 
+function positionsByTile(allPositions){
+	var tileIndex = {};
+	for(index in allPositions){
+		_.each(allPositions[index],function(tile){
+			if(!tileIndex[tile]){
+				tileIndex[tile] = [index]
+			}else{
+				tileIndex[tile].push(index)
+			}
+
+		})
+
+	}
+	return tileIndex
+}
+
 var allTiles = validTiles(10); //TODO don't hardcode size
 var remainingShipsSizes = _.map(ships,function(ship){return ship.size});
 
 var allPosiblePositions = findAllPosiblePostions(remainingShipsSizes,allTiles)
+var positionIndex = positionsByTile(allPosiblePositions)
 
-//console.log(remainingShipPositions)
-
-for (var i = 0; i < 100; i++) {
+for (var i = 0; i < 10000; i++) {
 	var remainingShipsSizes = _.map(ships,function(ship){return ship.size});
-	var remainingShipPositions =allPosiblePositions.slice()
+	var remainingShipPositions =_.clone(allPosiblePositions)
 	var remainingTiles = allTiles.slice()
 	var game = battleship.start();
 	var won = false
@@ -177,7 +193,6 @@ for (var i = 0; i < 100; i++) {
 			remainingTiles.splice(remainingTiles.indexOf(tile),1)
 		}else{
 			//console.log(moves)
-			remainingShipPositions = purgeImposiblePositions(remainingShipPositions,moves,remainingShipsSizes)
 			var tile = getMostLikelyTile(remainingShipPositions);
 			remainingTiles.splice(remainingTiles.indexOf(tile),1)
 		}
@@ -186,12 +201,14 @@ for (var i = 0; i < 100; i++) {
 		
 		var result = game.playTurn(tile);
 		moves.push(tile)
+		remainingShipPositions = purgeImposiblePositions(remainingShipPositions,positionIndex,tile)
 		//console.log("result",result.message)
 		won = result.code == 3
 		moves.push(tile)
 
 		if (result.code == 1){
 			hits.push(tile)
+
 			var newTargets = generateTargets(remainingTiles,tile)
 			targets = _.uniq(targets.concat(newTargets))
 			//console.log("new targets",targets);
