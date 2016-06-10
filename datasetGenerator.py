@@ -4,10 +4,13 @@ BOARD_SIZE = 10
 
 shipBoards = []
 
+
+
+
 def coordinatesToArray(position):
-	array = np.zeros([BOARD_SIZE,BOARD_SIZE],dtype=bool)
+	array = np.zeros([BOARD_SIZE,BOARD_SIZE],dtype=int)
 	for tile in position:
-		array[tile[0]][tile[1]] = True
+		array[tile[0]][tile[1]] = 1
 	return array
 
 def posiblePositionsForShip(size):
@@ -26,28 +29,28 @@ def interpolate(shipboards):
 	combinations = 120*140*160*160*180
 	total = 0
 	valid = 0
-	for s1 in shipBoards[0]:
-		for s2 in shipBoards[1]:
-			board1 = np.logical_or(s1,s2)
+	for s1 in shipboards[0]:
+		for s2 in shipboards[1]:
+			board1 = s1 + s2
 			if np.count_nonzero(board1) != 9:
 				total += 160 *160*180
 				continue
 
-			for s3 in shipBoards[2]:
-				board2 = np.logical_or(board1,s3)
+			for s3 in shipboards[2]:
+				board2 = board1 + s3
 				if np.count_nonzero(board2) != 12:
 					total += 160*180
 					continue
 
-				for s4 in shipBoards[3]:
-					board3 = np.logical_or(board2,s4)
+				for s4 in shipboards[3]:
+					board3 = board2 + s4
 					if np.count_nonzero(board3) != 15:
 						total += 180
 						continue
 
-					for s5 in shipBoards[4]:
+					for s5 in shipboards[4]:
 						total +=1
-						board4 = np.logical_or(board3,s5)
+						board4 = board3 + s5
 
 						if np.count_nonzero(board4) == 17:
 							#print "valid"
@@ -55,7 +58,8 @@ def interpolate(shipboards):
 
 			print "Space searched: " + str(float(total)/combinations *100) + "%"
 			print "Valid boards: " + str(float(valid)/total *100) + "%"
-	return validBoards
+			print "Valid boards: " + str(valid)
+	return valid
 
 
 

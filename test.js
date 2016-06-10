@@ -3,7 +3,7 @@ var _ = require("underscore");
 var battleship = require("./game")
 
 var tilesUsed = {}
-
+var boardsSeen = {}
 for (var i = 0; i < 10000; i++) {
 	var game = battleship.start();
  	var shipTiles = game.board.map(function(ship){
@@ -11,13 +11,13 @@ for (var i = 0; i < 10000; i++) {
 	});
 	shipTiles = [].concat.apply([], shipTiles)
 
-	_.each(shipTiles,function(tile){
+	var boardId = shipTiles.sort().join(",");
+	console.log(boardId);
+	/*_.each(shipTiles,function(tile){
 		if(tile in tilesUsed){
 			tilesUsed[tile]++ 
 		}else{
 			tilesUsed[tile] = 0
 		}
-	});
+	});*/
 }
-
-console.log(tilesUsed);
