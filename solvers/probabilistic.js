@@ -164,13 +164,15 @@ function positionsByTile(allPositions){
 	return tileIndex
 }
 
-var allTiles = validTiles(10); //TODO don't hardcode size
-var remainingShipsSizes = _.map(ships,function(ship){return ship.size});
+var allTiles = validTiles(3); //TODO don't hardcode size
+var remainingShipsSizes = [2,3];
 
 var allPosiblePositions = findAllPosiblePostions(remainingShipsSizes,allTiles)
+console.log(allPosiblePositions)
 var positionIndex = positionsByTile(allPosiblePositions)
+console.log(positionIndex.)
 
-for (var i = 0; i < 10000; i++) {
+for (var i = 0; i < 0; i++) {
 	var remainingShipsSizes = _.map(ships,function(ship){return ship.size});
 	var remainingShipPositions =_.clone(allPosiblePositions)
 	var remainingTiles = allTiles.slice()
