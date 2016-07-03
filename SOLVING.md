@@ -1,3 +1,6 @@
+This file contains a description of my advances towards trying to generate a better battleship algorithm. I'm writing this as documentation if I manage to solve this, or as a starting guide for enyone else who wants to get a shot at this.
+
+
 First of all disclaimers:
 
 · I'm not a computer scientist, I'm a systems engineer. If you are hoping for cool math, you are in the wrong place. 
@@ -50,5 +53,23 @@ Another aproach could be to use gpu's to do the computations and greatly acceler
 TODO: 
 
 1) Create the dataset. And get the number of all posible battleship games in the process
+
 2) Solve some games :D
 
+UPDATE 1:
+
+I got a generator working. It would probably take 10 hours just to count all available games. Ain't nobody got time for that. Besides, I ctrl+c'd it by mistake after an hour or so
+
+What did I learn from that?
+
+Well, the couple orders of magnitude drop I was hoping for between my upper bound and the valid boards was more like a 60% drop, so we are looking to something like 400GB to store all posible games.
+
+In the spirit of creating a faster generator I taught myself some opencl and put togheter a generator that uses a gpu to paralelize the board testing
+
+UPDATE 2:
+
+Who would have thought that gpu computing was hard! \s
+
+As of now, the opencl generator is about 20% faster than single core cpu generator. I'm quite happy at the optimizations I've made to make the problem as paralelizable as posible, yet it seems I need to teach me some more opencl optimizations.
+
+It really sucks there doesn't seem to be much in the way of profiling for gpu's using opencl. Looks like I might have more luck with CUDA

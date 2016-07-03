@@ -1,5 +1,6 @@
 import numpy as np
 
+
 BOARD_SIZE = 10
 
 shipBoards = []
@@ -8,10 +9,10 @@ shipBoards = []
 
 
 def coordinatesToArray(position):
-	array = np.zeros([BOARD_SIZE,BOARD_SIZE],dtype=int)
+	array = np.zeros([BOARD_SIZE,BOARD_SIZE],dtype=bool)
 	for tile in position:
-		array[tile[0]][tile[1]] = 1
-	return array
+		array[tile[0]][tile[1]] = True
+	return array.flatten()
 
 def posiblePositionsForShip(size):
 	positions = []
@@ -24,42 +25,33 @@ def posiblePositionsForShip(size):
 	return positions
 
 
-def interpolate(shipboards):
+def count_interpolate(ss1,ss2):
 	validBoards = []
-	combinations = 120*140*160*160*180
+	combinations = len(ss1)*len(ss2)
+	last = 0
 	total = 0
 	valid = 0
-	for s1 in shipboards[0]:
-		for s2 in shipboards[1]:
+	for s1 in ss1:
+		for s2 in ss2:
+			total+=1
 			board1 = s1 + s2
-			if np.count_nonzero(board1) != 9:
-				total += 160 *160*180
-				continue
+			if np.count_nonzero(board1) == 17:
+				valid+=1
 
-			for s3 in shipboards[2]:
-				board2 = board1 + s3
-				if np.count_nonzero(board2) != 12:
-					total += 160*180
-					continue
-
-				for s4 in shipboards[3]:
-					board3 = board2 + s4
-					if np.count_nonzero(board3) != 15:
-						total += 180
-						continue
-
-					for s5 in shipboards[4]:
-						total +=1
-						board4 = board3 + s5
-
-						if np.count_nonzero(board4) == 17:
-							#print "valid"
-							valid+=1
-
-			print "Space searched: " + str(float(total)/combinations *100) + "%"
-			print "Valid boards: " + str(float(valid)/total *100) + "%"
-			print "Valid boards: " + str(valid)
+		print "Space searched: " + str(float(total)/combinations *100) + "%"
+		print "Valid boards: " + str(float(valid)/total *100) + "%"
+		print "Valid boards: " + str(valid)
 	return valid
+
+def shortInterpolate(ss1,ss2,size):
+	validBoards = []
+	for s1 in ss1:
+		for s2 in ss2:
+			b = s1+s2
+			if(np.count_nonzero(b)==size):
+				validBoards.append(b)
+
+	return validBoards
 
 
 
@@ -69,9 +61,15 @@ for shipSize in [5,4,3,3,2]:
 	shipBoards.append(posible)
 
 
-validBoards = interpolate(shipBoards)
+#print shipBoards[0][0:5]
+s12 = shortInterpolate(shipBoards[0],shipBoards[1],9)
+s123 = shortInterpolate(s12,shipBoards[2],12)
+print len(s123)
+s45 = shortInterpolate(shipBoards[3],shipBoards[4],5)
+print len(s45)
+validBoards = count_interpolate(s123,s45)
 
 
-for board in reversed(validBoards):
-	print board
-	raw_input("Press Enter to continue...")
+# for board in reversed(validBoards):
+# 	print board
+# 	raw_input("Press Enter to continue...")
