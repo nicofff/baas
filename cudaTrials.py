@@ -67,9 +67,15 @@ def interpolate(bs1,bs2):
 	__kernel void sum(__global const int *v1,__global const int *v2, __global int *v1_ix, __global int *res_g) {
 
 	    int x = get_global_id(0);
+	    int x_size = get_global_size(0);
 	    int y = get_global_id(1);
-	    int v1_index = v1_ix[0];
-	    res_g[ 4 * x + y ]=v1[4*v1_index + y] | v2[4 * x + y];
+	    int y_size = get_global_size(1);
+	    int z = get_global_id(2);
+	    int z_size = get_global_size(2);
+	    int v1_index = v1_ix[0]+y;
+
+
+	    res_g[ y * x_size * z_size + z_size * x + z ]=v1[z_size*v1_index + z] | v2[z_size * x + z];
 	}
 
 	__kernel void validate(__global const int *v1, __global char *res_g) {
@@ -100,23 +106,28 @@ def interpolate(bs1,bs2):
 	s2_g = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=s2)
 	
 
+	blockSize = 1
+
 	iterSize= len(bs1)
-	iterations = len(bs2)
+	iterations = len(bs2) / blockSize
 
+	
 
-	sum_result_np = np.empty([iterSize,16]).astype(np.uint8)
+	workSize = iterSize * blockSize
+
+	sum_result_np = np.empty([workSize,16]).astype(np.uint8)
 	sum_result_np_g = cl.Buffer(ctx, mf.WRITE_ONLY, sum_result_np.nbytes)
 
-	validate_result_np = np.empty([iterSize]).astype(np.uint8)	
+	validate_result_np = np.empty([workSize]).astype(np.uint8)
 	validate_result_np_g = cl.Buffer(ctx, mf.WRITE_ONLY, validate_result_np.nbytes)
 
 	for step in xrange(iterations):
 		print "Tested: " + str(float(step)/(iterations)*100) + "%"
 
-		ixs = np.array([step]).astype(np.int32)
+		ixs = np.array([step*blockSize]).astype(np.int32)
 		s1_ix = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=ixs)
 
-		prg.sum(queue, (iterSize,4), None, s2_g, s1_g, s1_ix,sum_result_np_g);
+		prg.sum(queue, (iterSize,blockSize,4), None, s2_g, s1_g, s1_ix,sum_result_np_g);
 
 
 ##
@@ -129,12 +140,12 @@ def interpolate(bs1,bs2):
 
 ##
 		prg.validate(queue, validate_result_np.shape, None, sum_result_np_g, validate_result_np_g);
-
 		cl.enqueue_copy(queue, validate_result_np, validate_result_np_g)
 
-		valid += np.count_nonzero(validate_result_np)
+
+		valid += np.sum(validate_result_np)
 		print valid
-		print "Valid: " + str(float(valid)/(step*iterSize+1)*100)+"%"
+		print "Valid: " + str(float(valid)/((step+1)*workSize)*100)+"%"
 
 	# print total
 	# print "Space searched: " + str(float(total)/combinations *100) + "%"
