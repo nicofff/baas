@@ -73,3 +73,11 @@ Who would have thought that gpu computing was hard! \s
 As of now, the opencl generator is about 20% faster than single core cpu generator. I'm quite happy at the optimizations I've made to make the problem as paralelizable as posible, yet it seems I need to teach me some more opencl optimizations.
 
 It really sucks there doesn't seem to be much in the way of profiling for gpu's using opencl. Looks like I might have more luck with CUDA
+
+UPDATE 3:
+
+First round of GPU memory optimizations. Basically, making all memory allocations a power of two, and packing the data in more efficient datatypes.
+
+So instead of a int32[100] for each board, now I'm using a bool[128], which is equivalent to similarly a char[32] or int32[8]
+
+So I'm getting an 8x speedup from running on the cpu

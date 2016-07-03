@@ -9,10 +9,12 @@ shipBoards = []
 
 
 def coordinatesToArray(position):
-	array = np.zeros([BOARD_SIZE,BOARD_SIZE],dtype=bool)
+	array = np.zeros([BOARD_SIZE,BOARD_SIZE],dtype=np.bool)
 	for tile in position:
 		array[tile[0]][tile[1]] = True
-	return array.flatten()
+	array = array.flatten()
+	array.resize((128,))
+	return array
 
 def posiblePositionsForShip(size):
 	positions = []
@@ -34,7 +36,7 @@ def count_interpolate(ss1,ss2):
 	for s1 in ss1:
 		for s2 in ss2:
 			total+=1
-			board1 = s1 + s2
+			board1 = np.logical_or(s1,s2);
 			if np.count_nonzero(board1) == 17:
 				valid+=1
 
@@ -43,16 +45,16 @@ def count_interpolate(ss1,ss2):
 		print "Valid boards: " + str(valid)
 	return valid
 
+
 def shortInterpolate(ss1,ss2,size):
 	validBoards = []
 	for s1 in ss1:
 		for s2 in ss2:
-			b = s1+s2
+			b = np.logical_or(s1,s2);
 			if(np.count_nonzero(b)==size):
 				validBoards.append(b)
 
 	return validBoards
-
 
 
 for shipSize in [5,4,3,3,2]:
