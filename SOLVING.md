@@ -78,6 +78,14 @@ UPDATE 3:
 
 First round of GPU memory optimizations. Basically, making all memory allocations a power of two, and packing the data in more efficient datatypes.
 
-So instead of a int32[100] for each board, now I'm using a bool[128], which is equivalent to similarly a char[32] or int32[8]
+So instead of a int32[100] for each board, now I'm using a bool[128], which is equivalent to similarly a char[16] or int32[4]
 
-So I'm getting an 8x speedup from running on the cpu
+So I'm getting an 8x speedup from running on the cpu :D
+
+UPDATE 4: 
+
+Jackpot!!
+
+So, tweaking datatypes and the work unit I'm sending to the gpu got me up to a wooping 165x speedup against same algorithm on cpu. I can now find all valid battleship boards in around 6 minutes.
+
+I think I might be able to squeaze a bit more juice out of the gpu still.

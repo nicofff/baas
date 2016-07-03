@@ -64,28 +64,24 @@ def interpolate(bs1,bs2):
 	ctx = cl.create_some_context()
 	prg = cl.Program(ctx, """
 
-	__kernel void sum(__global const char *v1,__global const char *v2, __global int *v1_ix, __global char *res_g) {
+	__kernel void sum(__global const int *v1,__global const int *v2, __global int *v1_ix, __global int *res_g) {
 
 	    int x = get_global_id(0);
 	    int y = get_global_id(1);
 	    int v1_index = v1_ix[0];
-	    res_g[ 16 * x + y ]=v1[16*v1_index + y] | v2[16 * x + y];
+	    res_g[ 4 * x + y ]=v1[4*v1_index + y] | v2[4 * x + y];
 	}
 
-	__kernel void validate(__global const char *v1, __global int *res_g) {
+	__kernel void validate(__global const int *v1, __global char *res_g) {
 
 	    int ix = get_global_id(0);
 	    int x,count = 0;
-	    for (x=0;x<16;x++){
-	    	int value = v1[16*ix + x];
-	    	count+= (value & 1) != 0;
-	    	count+= (value & 2) != 0;
-	    	count+= (value & 4) != 0;
-	    	count+= (value & 8) != 0;
-	    	count+= (value & 16) != 0;
-	    	count+= (value & 32) != 0;
-	    	count+= (value & 64) != 0;
-	    	count+= (value & 128) != 0;
+	    uint n;
+	    for (x=0;x<4;x++){
+	    	int value = v1[4*ix + x];
+	    	for (n=0;n<32;n++){
+	    		count+= ((value & (1 << n)) != 0);
+	    	}
 
 	    }
 		res_g[ix]= (count==17);
@@ -95,7 +91,6 @@ def interpolate(bs1,bs2):
 	queue = cl.CommandQueue(ctx)
 	mf = cl.mem_flags
 
-	combinations = 120*140*160*160*180
 	total = 0
 	valid = 0
 
@@ -105,40 +100,41 @@ def interpolate(bs1,bs2):
 	s2_g = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=s2)
 	
 
-	iterSize= len(bs2)
-	iterations = len(bs1)
+	iterSize= len(bs1)
+	iterations = len(bs2)
+
 
 	sum_result_np = np.empty([iterSize,16]).astype(np.uint8)
 	sum_result_np_g = cl.Buffer(ctx, mf.WRITE_ONLY, sum_result_np.nbytes)
 
-	validate_result_np = np.empty([iterSize]).astype(np.int32)	
+	validate_result_np = np.empty([iterSize]).astype(np.uint8)	
 	validate_result_np_g = cl.Buffer(ctx, mf.WRITE_ONLY, validate_result_np.nbytes)
 
 	for step in xrange(iterations):
-		print str(float(step)/(iterations)*100) + "%"
+		print "Tested: " + str(float(step)/(iterations)*100) + "%"
 
 		ixs = np.array([step]).astype(np.int32)
 		s1_ix = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=ixs)
 
-		prg.sum(queue, (iterSize,16), None, s1_g, s2_g, s1_ix,sum_result_np_g);
+		prg.sum(queue, (iterSize,4), None, s2_g, s1_g, s1_ix,sum_result_np_g);
 
 
-###
+##
 		# cl.enqueue_copy(queue, sum_result_np, sum_result_np_g).wait()
 		# print np.resize(int2BoolArray(s1)[0],(10,10))
-		# print np.resize(int2BoolArray(s2)[128],(10,10))
-		# print np.resize(int2BoolArray(sum_result_np)[128],(10,10))
+		# print np.resize(int2BoolArray(s2)[0],(10,10))
+		# print np.resize(int2BoolArray(sum_result_np)[0],(10,10))
 		# print 
 		# break
 
-###
+##
 		prg.validate(queue, validate_result_np.shape, None, sum_result_np_g, validate_result_np_g);
 
-		cl.enqueue_copy(queue, validate_result_np, validate_result_np_g).wait()
+		cl.enqueue_copy(queue, validate_result_np, validate_result_np_g)
 
 		valid += np.count_nonzero(validate_result_np)
 		print valid
-		print str(float(valid)/(step*iterSize+1)*100)+"%"
+		print "Valid: " + str(float(valid)/(step*iterSize+1)*100)+"%"
 
 	# print total
 	# print "Space searched: " + str(float(total)/combinations *100) + "%"
