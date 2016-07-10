@@ -7,6 +7,11 @@ import pyopencl as cl
 
 BOARD_SIZE = 10
 
+STATE_MISS = 0
+STATE_HIT = 1
+STATE_UNKNOWN = 2
+
+
 shipBoards = []
 
 def bool2IntArray(boolArray):
@@ -22,6 +27,20 @@ def int2BoolArray(boolArray):
 		ret.append(np.unpackbits(array))
 
 	return ret
+
+def filterInvalid(current_state,board_array):
+	# Assuming we're using the 2board sum logic
+	# For the sum of two boards to be valid,
+	# all misses in the current state, should also 
+	# be misses in both boards
+	# The same logic DOES NOT apply to hits
+	state_misses = [x for x in range(len(current_state)) if current_state[x]==STATE_MISS]
+	valid= []
+	for board in board_array:
+		board_misses = [x for x in range(len(board)) if board[x]==STATE_MISS]
+		mask = np.in1d(state_misses,board_misses)
+		if mask.all():
+			valid.append(board);
 
 def coordinatesToArray(position):
 	array = np.zeros([BOARD_SIZE,BOARD_SIZE],dtype=np.bool)
@@ -41,18 +60,6 @@ def posiblePositionsForShip(size):
 
 	return positions
 
-
-def ix_to_coord(ix):
-	z = ix % 180
-	res = ix / 180
-	y = res % 160
-	res = res / 160
-	x = res % 160
-	res = res / 160
-	w = res % 140
-	res = res / 140
-	v = res 
-	return (v,w,x,y,z)
 
 def interpolate(bs1,bs2):
 	print "Starting computation"
@@ -78,19 +85,30 @@ def interpolate(bs1,bs2):
 	    res_g[ y * x_size * z_size + z_size * x + z ]=v1[z_size*v1_index + z] | v2[z_size * x + z];
 	}
 
-	__kernel void validate(__global const int *v1, __global char *res_g) {
+	__kernel void validate(__global const int *v1, __global char *curr_state,__global char *res_g) {
 
 	    int ix = get_global_id(0);
 	    int x,count = 0;
-	    uint n;
+	    uint n,tile, violations = 0;
+	    char state;
+	    int value;
+	    bool hit,miss;
 	    for (x=0;x<4;x++){
-	    	int value = v1[4*ix + x];
+	    	value = v1[4*ix + x];
 	    	for (n=0;n<32;n++){
-	    		count+= ((value & (1 << n)) != 0);
+	    		state = curr_state[n*x];
+	    		miss = (state==0);
+	    		hit = (state==1);
+	    		tile = ((value & (1 << n)) != 0);
+	    		count+= tile;
+	    		violations += (hit && !tile );
+	    		violations += (miss && tile );
 	    	}
 
 	    }
-		res_g[ix]= (count==17);
+
+
+		res_g[ix]= (count==17) && (violations == 0);
 	}
 
 	""").build()
@@ -100,22 +118,35 @@ def interpolate(bs1,bs2):
 	total = 0
 	valid = 0
 
+	current_state = np.empty([128]).astype(np.uint8)
+	current_state.fill(STATE_UNKNOWN);
+	#current_state[0] = STATE_MISS;
+	#bs1 = filterInvalid(current_state,bs1)
+	#bs2 = filterInvalid(current_state,bs2)
+	#print len(bs1)
+	#print len(bs2)
+
 	s1 = np.array(bs1).astype(np.uint8)
 	s2 = np.array(bs2).astype(np.uint8)
 	s1_g = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=s1)
 	s2_g = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=s2)
-	
 
-	blockSize = 1
+
+	current_state_g = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=current_state)
+
+
+
+	blockSize = 8
 
 	iterSize= len(bs1)
 	iterations = len(bs2) / blockSize
 
-	
+	assert( (len(bs2) / float(blockSize)) %1 == 0 )
 
 	workSize = iterSize * blockSize
 
-	sum_result_np = np.empty([workSize,16]).astype(np.uint8)
+
+	sum_result_np = np.empty([workSize,128]).astype(np.uint8)
 	sum_result_np_g = cl.Buffer(ctx, mf.WRITE_ONLY, sum_result_np.nbytes)
 
 	validate_result_np = np.empty([workSize]).astype(np.uint8)
@@ -139,11 +170,12 @@ def interpolate(bs1,bs2):
 		# break
 
 ##
-		prg.validate(queue, validate_result_np.shape, None, sum_result_np_g, validate_result_np_g);
+		prg.validate(queue, validate_result_np.shape, None, sum_result_np_g, current_state_g, validate_result_np_g);
+
 		cl.enqueue_copy(queue, validate_result_np, validate_result_np_g)
+		valid += np.sum(validate_result_np,dtype=np.int32)
 
 
-		valid += np.sum(validate_result_np)
 		print valid
 		print "Valid: " + str(float(valid)/((step+1)*workSize)*100)+"%"
 
