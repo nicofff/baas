@@ -33,8 +33,8 @@ def count_interpolate(ss1,ss2):
 	last = 0
 	total = 0
 	valid = 0
-	for s1 in ss1:
-		for s2 in ss2:
+	for s1 in ss2:
+		for s2 in ss1:
 			total+=1
 			board1 = np.logical_or(s1,s2);
 			if np.count_nonzero(board1) == 17:
@@ -43,6 +43,8 @@ def count_interpolate(ss1,ss2):
 		print "Space searched: " + str(float(total)/combinations *100) + "%"
 		print "Valid boards: " + str(float(valid)/total *100) + "%"
 		print "Valid boards: " + str(valid)
+		print valid - last
+		last = valid
 	return valid
 
 
