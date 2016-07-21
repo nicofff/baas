@@ -7,9 +7,7 @@ First of all disclaimers:
 
 · This asumes the rules in the README
 
-· There is a factor of game theory to playing this game. If you know the algorithm you are playing against, you are going to place your ships accordingly.
-
-This asumes the ships are placed completely random.
+· There is a factor of game theory to playing this game. If you know the algorithm you are playing against, you are going to place your ships accordingly. This asumes the ships are placed completely random.
 
 The solutions cited in the README, plus most I was able to find went the route of trying to estimate how many ships could posible be in a tile and derive the probability from there.
 
@@ -36,7 +34,7 @@ Cruiser	=> 8*20 = 160
 Destroyer => 9*20 = 180
 
 
-If we consider a complete board as the "sum" of one board of each type of ship. Then we get 120*140*160*160*180 posible boards = 77414400000 = 7.7E10
+If we consider a complete board as the "sum" of one board of each type of ship. Then we get 120x140x160x160x180 posible boards = 77414400000 = 7.7E10
 
 That's a lot to calculate on every turn (even if the real value is a couple orders of magnitude less), but at 100 bits per board that's 7.7E12 bits or 900 GB which is within the realm of what can be precomputed and stored.
 
