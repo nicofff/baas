@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
@@ -11,7 +11,7 @@ STATE_MISS = 0
 STATE_HIT = 1
 STATE_UNKNOWN = 2
 
-
+np.set_printoptions(linewidth=128)
 shipBoards = []
 
 def bool2IntArray(boolArray):
@@ -71,14 +71,26 @@ def interpolate(bs1,bs2):
 	ctx = cl.create_some_context()
 	prg = cl.Program(ctx, """
 
-	__kernel void sum(__global const int *v1,__global const int *v2, uint v1_index, __global int *res_g) {
+	__kernel void sum(__global const int *v1,__global const int *v2, __global const int *current_state, uint v1_index, __global int *sum_g ,__global int *valids_g) {
 
 	    int work_item = get_global_id(0);
 	    int work_size = get_global_size(0);
 	    int array_position = get_global_id(1);
 	    int array_size = get_global_size(1);
 
-	    res_g[ work_item * array_size + array_position] = v1[v1_index * array_size + array_position] | v2[ work_item * array_size + array_position];
+	    int v1_local =v1[v1_index * array_size + array_position];
+	    int v2_local =v2[ work_item * array_size + array_position];
+	    int current_state_local = current_state[array_position];
+
+	    int result = v1_local | v2_local;
+	    int overlapping = v1_local & v2_local;
+	    int non_matching_hits = (( current_state_local | result) ^ result);
+
+	    valids_g[work_item * array_size + array_position] = ~(overlapping | non_matching_hits);
+
+	    sum_g[ work_item * array_size + array_position] = result;
+	    
+	    
 	}
 
 	__kernel void validate(__global const int *v1, __global int *curr_state,__global char *res_g) {
@@ -104,54 +116,69 @@ def interpolate(bs1,bs2):
 		res_g[ix]= (count == 17) && (violations==0);
 	}
 
-	__kernel void matrix_count(__global const int *v1, __global char *valids_g, uint work_size, __global long *out_matrix) {
+	__kernel void join_validity(__global long *valids) {
+
+	    int ix = get_global_id(0);
+	    long v1 = valids[2*ix];
+	    long v2 = valids[2*ix + 1];
+	    long invalid = (~v1 | ~v2);
+	    if (invalid != 0){
+	    	valids[2*ix] = 0;
+	    	valids[2*ix +1] = 0;
+	    }
+
+
+	}
+
+
+	__kernel void matrix_count(__global const int *v1, __global int *valids_g, uint work_size, __global long *out_matrix) {
 		int sector = get_global_id(0);
 		int workers = get_global_size(0);
-		int value;
-		uint board_ix;
+		int board_sector = get_global_id(1);
+		int local_sector;
+		int local_valid;
+		int offset,board;
 		char bit_ix;
-		int block_size = (work_size/workers) + 1;
-		for (uint board = 0;board<block_size;board++){
-			board_ix = workers*sector + board;
-			if (board_ix < work_size){
-				if(valids_g[board_ix]==1){
-					char * board_p = v1 + board_ix * 4;
+		long sum[32] = {0};
 
+		uint work_unit = work_size / workers +1 ;
 
-					for(uint byte=0;byte<32;byte++){
-						value = board_p[byte];
-
-						for(uint bit=0;bit<8;bit++){
-							bit_ix = 8 - bit;
-							int offset = 8*byte+bit;
-							out_matrix[128*sector+offset] += ((value & (1 << bit_ix)) != 0);
-						}
-					}
-
-				}	
+		for (uint board_ix = 0;board_ix < work_unit	; board_ix++){
+			board = work_unit * sector + board_ix;
+			if (board >= work_size){
+				break;
 			}
+			local_sector = v1[4*board + board_sector];
+			local_valid = valids_g[4*board + board_sector];
+			for (char byte = 0; byte < 4; byte++){
+				for (char bit = 0; bit < 8; bit++){
+					bit_ix = 8 - bit - 1;
+					offset = 8*byte+bit;
 
+					sum[offset] += (((local_sector & (1 << 8*byte + bit_ix)) != 0) && ((local_valid & (1 << 8*byte + bit_ix)) != 0));
+				}
+			}
 		}
 
-		/*for(int x = 0; x<128;x++){
-			out_matrix[128*sector+x] = count[x];
-		}*/
-		
+		for (char position = 0; position < 32; position++){
+			out_matrix[sector* 128 + 32*board_sector + position ] += sum[position];
+		}
+
+
 	}
 
 
 	""").build()
 	queue = cl.CommandQueue(ctx)
 	mf = cl.mem_flags
-	print mf
 
 	total = 0
 	valid = 0
 
 	current_state = np.empty([128]).astype(np.bool)
 	current_state.fill(False);
+	current_state[0] = STATE_HIT;
 	current_state = np.packbits(current_state).astype(np.uint8)
-	#current_state[0] = STATE_MISS;
 	#bs1 = filterInvalid(current_state,bs1)
 	#bs2 = filterInvalid(current_state,bs2)
 	#print len(bs1)
@@ -159,7 +186,7 @@ def interpolate(bs1,bs2):
 
 	s1 = np.array(bs1).astype(np.uint8)
 	s2 = np.array(bs2).astype(np.uint8)
-	print s2.shape
+
 	s1_g = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=s1)
 	s2_g = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=s2)
 
@@ -181,30 +208,42 @@ def interpolate(bs1,bs2):
 	sum_result_np = np.empty([workSize,16]).astype(np.uint8)
 	sum_result_np_g = cl.Buffer(ctx, mf.WRITE_ONLY, sum_result_np.nbytes)
 
-	validate_result_np = np.empty([workSize]).astype(np.uint8)
-	validate_result_np_g = cl.Buffer(ctx, mf.WRITE_ONLY, validate_result_np.nbytes)
+	valid_np = np.empty([workSize,16]).astype(np.uint8)
+	valid_np_g = cl.Buffer(ctx, mf.READ_WRITE, valid_np.nbytes)
 
-	count_matrix = np.zeros([131072,128]).astype(np.uint64)
+	count_matrix = np.zeros([512,128]).astype(np.uint64)
 	count_matrix_g = cl.Buffer(ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=count_matrix)
 
 	for step in xrange(iterations):
+	#for step in xrange(100):
 		print "Tested: " + str(float(step)/(iterations)*100) + "%"
 
-		prg.sum(queue, (workSize,4), None, s2_g, s1_g, np.uint32(step), sum_result_np_g);
+		prg.sum(queue, (workSize,4), None, s2_g, s1_g, current_state_g, np.uint32(step), sum_result_np_g, valid_np_g);
+		prg.join_validity(queue, (workSize,), None, valid_np_g);
+		# cl.enqueue_copy(queue, valid_np, valid_np_g)
+		# ix = 0
+		# for board in valid_np:
+		# 	if board[0]!=0:
+		# 		print ix
+		# 	ix+=1
+		# break
 
-		prg.validate(queue, (workSize,), None, sum_result_np_g, current_state_g, validate_result_np_g);
-
-		prg.matrix_count(queue, (131072,), None, sum_result_np_g, validate_result_np_g, np.uint32(workSize),count_matrix_g);
-
+		prg.matrix_count(queue, (512,4), None, sum_result_np_g, valid_np_g, np.uint32(workSize),count_matrix_g);
 
 	cl.enqueue_copy(queue, count_matrix, count_matrix_g)
-	print np.resize(sum(count_matrix),(10,10))
+	total_matrix = np.resize(sum(count_matrix),(10,10))
+	print total_matrix
+	print total_matrix.astype(np.float) / sum(sum(total_matrix))
+
+	#cl.enqueue_copy(queue, count_matrix, count_matrix_g)
+	#print np.resize(sum(count_matrix),(10,10))
 
 	# print total
 	# print "Space searched: " + str(float(total)/combinations *100) + "%"
 	# print "Valid boards: " + str(float(valid)/total *100) + "%"
 	# print "Valid boards: " + str(valid)
 	return valid
+
 
 
 def shortInterpolate(ss1,ss2,size):

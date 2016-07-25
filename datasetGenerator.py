@@ -1,4 +1,5 @@
 import numpy as np
+np.set_printoptions(linewidth=128)
 
 
 BOARD_SIZE = 10
@@ -38,13 +39,16 @@ def count_interpolate(ss1,ss2):
 			total+=1
 			board1 = np.logical_or(s1,s2);
 			if np.count_nonzero(board1) == 17:
+				validBoards.append(board1)
 				valid+=1
 
 		print "Space searched: " + str(float(total)/combinations *100) + "%"
 		print "Valid boards: " + str(float(valid)/total *100) + "%"
 		print "Valid boards: " + str(valid)
 		print valid - last
+		print np.resize(sum(validBoards),(10,10))
 		last = valid
+		break
 	return valid
 
 
