@@ -214,8 +214,8 @@ def interpolate(bs1,bs2):
 	count_matrix = np.zeros([512,128]).astype(np.uint64)
 	count_matrix_g = cl.Buffer(ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=count_matrix)
 
-	for step in xrange(iterations):
-	#for step in xrange(100):
+	#for step in xrange(iterations):
+	for step in xrange(1000):
 		print "Tested: " + str(float(step)/(iterations)*100) + "%"
 
 		prg.sum(queue, (workSize,4), None, s2_g, s1_g, current_state_g, np.uint32(step), sum_result_np_g, valid_np_g);
