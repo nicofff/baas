@@ -112,9 +112,10 @@ def interpolate(bs1,bs2):
 		int board_sector = get_global_id(1);
 		int local_sector;
 		int local_valid;
-		int offset,board;
+		uint offset,board;
 		char bit_ix;
 		long sum[32] = {0};
+		char bit, byte;
 
 		uint work_unit = work_size / workers +1 ;
 
@@ -125,13 +126,14 @@ def interpolate(bs1,bs2):
 			}
 			local_sector = v1[4*board + board_sector];
 			local_valid = valids_g[4*board + board_sector];
-			for (char byte = 0; byte < 4; byte++){
-				for (char bit = 0; bit < 8; bit++){
-					bit_ix = 8 - bit - 1;
-					offset = 8*byte+bit;
+			for (char tile = 0; tile < 32; tile++){
+				bit = tile & 7;
+				byte = (tile & 24) >> 3;
 
-					sum[offset] += (((local_sector & (1 << 8*byte + bit_ix)) != 0) && ((local_valid & (1 << 8*byte + bit_ix)) != 0));
-				}
+				bit_ix = 8*byte - bit + 7;
+
+				sum[tile] += (((local_sector & (1 << bit_ix))) && local_valid);
+				
 			}
 		}
 
