@@ -74,46 +74,21 @@ def interpolate(bs1,bs2):
 	__kernel void sum(__global const int *v1,__global const int *v2, __global const int *current_state, uint v1_index, __global int *sum_g ,__global int *valids_g) {
 
 	    int work_item = get_global_id(0);
-	    int work_size = get_global_size(0);
-	    int array_position = get_global_id(1);
-	    int array_size = get_global_size(1);
+	    int array_position = work_item  & 3; // % 4
 
-	    int v1_local =v1[v1_index * array_size + array_position];
-	    int v2_local =v2[ work_item * array_size + array_position];
+	    int v1_local =v1[v1_index * 4 + array_position];
+	    int v2_local =v2[ work_item ];
 	    int current_state_local = current_state[array_position];
 
 	    int result = v1_local | v2_local;
 	    int overlapping = v1_local & v2_local;
 	    int non_matching_hits = (( current_state_local | result) ^ result);
 
-	    valids_g[work_item * array_size + array_position] = ~(overlapping | non_matching_hits);
+	    valids_g[work_item] = ~(overlapping | non_matching_hits);
 
-	    sum_g[ work_item * array_size + array_position] = result;
+	    sum_g[ work_item] = result;
 	    
 	    
-	}
-
-	__kernel void validate(__global const int *v1, __global int *curr_state,__global char *res_g) {
-
-	    int ix = get_global_id(0);
-	    uint x,count = 0;
-	    uint n, violations = 0;
-	    char state;
-	    uint value, hits,tile;
-	    bool hit,miss;
-	    for (x=0;x<4;x++){
-	    	value = v1[4*ix + x];
-    		hits = curr_state[x];
-    		violations += ((hits | value ) != value); // Hits should match ship positions
-    		for (uint bit = 0; bit < 32; bit++ ){
-    			tile = ((value & (1 << bit)) != 0);
-    			count += tile;
-    		}
-
-	    }
-
-
-		res_g[ix]= (count == 17) && (violations==0);
 	}
 
 	__kernel void join_validity(__global long *valids) {
@@ -218,7 +193,7 @@ def interpolate(bs1,bs2):
 	for step in xrange(1000):
 		print "Tested: " + str(float(step)/(iterations)*100) + "%"
 
-		prg.sum(queue, (workSize,4), None, s2_g, s1_g, current_state_g, np.uint32(step), sum_result_np_g, valid_np_g);
+		prg.sum(queue, (workSize * 4,), None, s2_g, s1_g, current_state_g, np.uint32(step), sum_result_np_g, valid_np_g);
 		prg.join_validity(queue, (workSize,), None, valid_np_g);
 		# cl.enqueue_copy(queue, valid_np, valid_np_g)
 		# ix = 0
@@ -234,6 +209,7 @@ def interpolate(bs1,bs2):
 	total_matrix = np.resize(sum(count_matrix),(10,10))
 	print total_matrix
 	print total_matrix.astype(np.float) / sum(sum(total_matrix))
+		#break
 
 	#cl.enqueue_copy(queue, count_matrix, count_matrix_g)
 	#print np.resize(sum(count_matrix),(10,10))
