@@ -106,19 +106,19 @@ def interpolate(bs1,bs2):
 	}
 
 
-	__kernel void matrix_count(__global const int *v1, __global int *valids_g, uint work_size, __global long *out_matrix) {
+	__kernel void matrix_count(__global const char *v1, __global char *valids_g, uint work_size, __global long *out_matrix) {
 		/*int sector = get_global_id(0);
 		int workers = get_global_size(0);
 		int board_sector = get_global_id(1);*/
 		int ix = get_global_id(0);
-		int workers = get_global_size(0) >> 2;
-		int sector = ix >> 2;
-		int board_sector = ix & 3;
+		int workers = get_global_size(0) >> 4;
+		int sector = ix >> 4;
+		int board_sector = ix & 15;
 		char bit,byte,bit_ix;
-		int local_sector;
-		int local_valid;
+		char local_sector;
+		char local_valid;
 		uint board;
-		long sum[32] = {0};
+		long sum[8] = {0};
 
 		uint work_unit = (work_size >> 9) +1 ; // 512 = 2^9
 
@@ -127,9 +127,9 @@ def interpolate(bs1,bs2):
 			if (board >= work_size){
 				break;
 			}
-			local_sector = v1[4*board + board_sector];
-			local_valid = valids_g[4*board + board_sector];
-			for (char tile = 0; tile < 32; tile++){
+			local_sector = v1[16*board + board_sector];
+			local_valid = valids_g[16*board + board_sector];
+			for (char tile = 0; tile < 8; tile++){
 				bit = tile & 7;
 				byte = tile >> 3;
 
@@ -140,8 +140,8 @@ def interpolate(bs1,bs2):
 			}
 		}
 
-		for (char position = 0; position < 32; position++){
-			out_matrix[sector* 128 + 32*board_sector + position ] += sum[position];
+		for (char position = 0; position < 8; position++){
+			out_matrix[sector* 128 + 8*board_sector + position ] += sum[position];
 		}
 
 
@@ -207,7 +207,7 @@ def interpolate(bs1,bs2):
 		# 	ix+=1
 		# break
 
-		prg.matrix_count(queue, (512 * 4,), None, sum_result_np_g, valid_np_g, np.uint32(workSize),count_matrix_g);
+		prg.matrix_count(queue, (512 * 16,), None, sum_result_np_g, valid_np_g, np.uint32(workSize),count_matrix_g);
 
 	cl.enqueue_copy(queue, count_matrix, count_matrix_g)
 	total_matrix = np.resize(sum(count_matrix),(10,10))
