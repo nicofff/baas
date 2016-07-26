@@ -107,17 +107,20 @@ def interpolate(bs1,bs2):
 
 
 	__kernel void matrix_count(__global const int *v1, __global int *valids_g, uint work_size, __global long *out_matrix) {
-		int sector = get_global_id(0);
+		/*int sector = get_global_id(0);
 		int workers = get_global_size(0);
-		int board_sector = get_global_id(1);
+		int board_sector = get_global_id(1);*/
+		int ix = get_global_id(0);
+		int workers = get_global_size(0) >> 2;
+		int sector = ix >> 2;
+		int board_sector = ix & 3;
+		char bit,byte,bit_ix;
 		int local_sector;
 		int local_valid;
-		uint offset,board;
-		char bit_ix;
+		uint board;
 		long sum[32] = {0};
-		char bit, byte;
 
-		uint work_unit = work_size / workers +1 ;
+		uint work_unit = (work_size >> 9) +1 ; // 512 = 2^9
 
 		for (uint board_ix = 0;board_ix < work_unit	; board_ix++){
 			board = work_unit * sector + board_ix;
@@ -128,11 +131,11 @@ def interpolate(bs1,bs2):
 			local_valid = valids_g[4*board + board_sector];
 			for (char tile = 0; tile < 32; tile++){
 				bit = tile & 7;
-				byte = (tile & 24) >> 3;
+				byte = tile >> 3;
 
 				bit_ix = 8*byte - bit + 7;
 
-				sum[tile] += (((local_sector & (1 << bit_ix))) && local_valid);
+				sum[tile] += ((local_sector & (1 << bit_ix)) && local_valid);
 				
 			}
 		}
@@ -148,13 +151,12 @@ def interpolate(bs1,bs2):
 	""").build()
 	queue = cl.CommandQueue(ctx)
 	mf = cl.mem_flags
-
 	total = 0
 	valid = 0
 
 	current_state = np.empty([128]).astype(np.bool)
 	current_state.fill(False);
-	current_state[0] = STATE_HIT;
+	#current_state[0] = STATE_HIT;
 	current_state = np.packbits(current_state).astype(np.uint8)
 	#bs1 = filterInvalid(current_state,bs1)
 	#bs2 = filterInvalid(current_state,bs2)
@@ -205,7 +207,7 @@ def interpolate(bs1,bs2):
 		# 	ix+=1
 		# break
 
-		prg.matrix_count(queue, (512,4), None, sum_result_np_g, valid_np_g, np.uint32(workSize),count_matrix_g);
+		prg.matrix_count(queue, (512 * 4,), None, sum_result_np_g, valid_np_g, np.uint32(workSize),count_matrix_g);
 
 	cl.enqueue_copy(queue, count_matrix, count_matrix_g)
 	total_matrix = np.resize(sum(count_matrix),(10,10))
