@@ -114,7 +114,6 @@ def interpolate(bs1,bs2):
 		int workers = get_global_size(0) >> 4;
 		int sector = ix >> 4;
 		int board_sector = ix & 15;
-		char bit,byte,bit_ix;
 		char local_sector;
 		char local_valid;
 		uint board;
@@ -130,12 +129,7 @@ def interpolate(bs1,bs2):
 			local_sector = v1[16*board + board_sector];
 			local_valid = valids_g[16*board + board_sector];
 			for (char tile = 0; tile < 8; tile++){
-				bit = tile & 7;
-				byte = tile >> 3;
-
-				bit_ix = 8*byte - bit + 7;
-
-				sum[tile] += ((local_sector & (1 << bit_ix)) && local_valid);
+				sum[tile] += ((local_sector & (1 << 7 - tile)) && local_valid);
 				
 			}
 		}
@@ -156,7 +150,7 @@ def interpolate(bs1,bs2):
 
 	current_state = np.empty([128]).astype(np.bool)
 	current_state.fill(False);
-	#current_state[0] = STATE_HIT;
+	current_state[22] = STATE_HIT;
 	current_state = np.packbits(current_state).astype(np.uint8)
 	#bs1 = filterInvalid(current_state,bs1)
 	#bs2 = filterInvalid(current_state,bs2)
@@ -192,21 +186,16 @@ def interpolate(bs1,bs2):
 
 	count_matrix = np.zeros([512,128]).astype(np.uint64)
 	count_matrix_g = cl.Buffer(ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=count_matrix)
-
-	#for step in xrange(iterations):
-	for step in xrange(1000):
-		print "Tested: " + str(float(step)/(iterations)*100) + "%"
+	print_limit=1
+	for step in xrange(iterations):
+	#for step in xrange(1000):
+		tested = float(step)/(iterations)*100
+		if tested > print_limit:
+			print "Tested: " + str(tested) + "%"
+			print_limit+=1
 
 		prg.sum(queue, (workSize * 4,), None, s2_g, s1_g, current_state_g, np.uint32(step), sum_result_np_g, valid_np_g);
 		prg.join_validity(queue, (workSize,), None, valid_np_g);
-		# cl.enqueue_copy(queue, valid_np, valid_np_g)
-		# ix = 0
-		# for board in valid_np:
-		# 	if board[0]!=0:
-		# 		print ix
-		# 	ix+=1
-		# break
-
 		prg.matrix_count(queue, (512 * 16,), None, sum_result_np_g, valid_np_g, np.uint32(workSize),count_matrix_g);
 
 	cl.enqueue_copy(queue, count_matrix, count_matrix_g)

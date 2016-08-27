@@ -92,3 +92,14 @@ Jackpot!!
 So, tweaking datatypes and the work unit I'm sending to the gpu got me up to a wooping 165x speedup against same algorithm on cpu. I can now find all valid battleship boards in around 6 minutes.
 
 I think I might be able to squeaze a bit more juice out of the gpu still.
+
+UPDATE 5:
+
+It's been a while since the last updates. I've been focusing on the transition from counting the amount of posible boards, to actually generating the matrix with the probabilities for each tile. 
+
+As of last commit, It's taking less than 4 minutes to calculate the probability matrix for an empty board. I call that a success.
+
+So this is the plan moving forward:
+
+Clearly I can't use this method for the first moves of the game, so I can either use some of the other approaches during the first turns, or I can do some caching of the probability matrix for the first turns. At least until the first hit, all games should play out the same. 
+
