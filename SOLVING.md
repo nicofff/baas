@@ -103,3 +103,7 @@ So this is the plan moving forward:
 
 Clearly I can't use this method for the first moves of the game, so I can either use some of the other approaches during the first turns, or I can do some caching of the probability matrix for the first turns. At least until the first hit, all games should play out the same. 
 
+UPDATE 6:
+
+This is getting boring. Waiting 4 minutes for each move means there is no way of acheiving my original goal of comparing this algorithm to the other ones. 
+If you are reading this and have a multi GPU computer or some money to burn in some AWS GPU instances, feel free to do so. Ping me if you want some help with the code.

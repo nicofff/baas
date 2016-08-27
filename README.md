@@ -1,4 +1,9 @@
+Solving the battleship game with GPU's
+======================================
+
 Inspired by http://www.datagenetics.com/blog/december32011/
+
+EDIT: See SOLVING.md for project evolution.
 
 I wanted to try and beat his algorithms, so naturally I needeed a battleship game generator.
 So I created one, as an http service, because why not!
