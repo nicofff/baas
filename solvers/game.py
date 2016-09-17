@@ -36,11 +36,15 @@ class BattleshipGame():
 			sp = np.logical_or(sp,s4)
 			if (np.count_nonzero(sp)!=17):
 				continue
-		
-			self.board = sp
-			#print sp.astype(np.int)
-			self.remaining_sizes = SHIP_SIZES[:]
-			self.base_boards = [s0,s1,s2,s3,s4]
+			
+			break
+
+		self.board = sp
+		#print sp.astype(np.int)
+		self.remaining_sizes = SHIP_SIZES[:]
+		self.base_boards = [s0,s1,s2,s3,s4]
+		self.hits = np.zeros((BOARD_SIZE,BOARD_SIZE),dtype=np.bool)
+
 
 	def get_remaining_sizes(self):
 		return self.get_remaining_sizes
@@ -48,24 +52,24 @@ class BattleshipGame():
 	def play_turn(self,tile):
 		#assert(self.played[x][y]==0)
 		#print self.base_boards
-
-		if (tile not in self.board):
+		row,column = tile
+		if (not self.board[row][column]):
 			return  {'code':STATE_MISS,'message':"Miss"}
 			
 
+		self.hits[row][column] = True
 		for ix, base_board in enumerate(self.base_boards):
-			if (tile not in base_board):
+			if (not base_board[row,column]):
 				continue
 
 			ret = {'code':STATE_HIT,'message':"Hit"}
-			self.base_boards[ix].remove(tile)
 
-			if (self.base_boards[ix] == []):
+			if (np.array_equal(np.logical_and(self.hits,base_board),base_board)):
 				ret = {'code':STATE_HIT,'message':"Sunk"}
 				del self.base_boards[ix]
 				del self.remaining_sizes[ix]
 
-				if (self.base_boards == []):
+				if (np.array_equal(np.logical_and(self.hits,self.board),self.board)):
 					ret = {'code':STATE_GAME_OVER,'message':"Game Over"}
 			
 			return ret

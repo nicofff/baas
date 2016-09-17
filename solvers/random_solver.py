@@ -36,9 +36,10 @@ def play_game(bs_game,solver):
 
 solver = RandomSolver();
 
-rounds = 100000
+rounds = 20000
 
 for x in xrange(rounds):
 	bs_game = game.BattleshipGame()
 	solver.reset()
 	play_game(bs_game,solver)
+	print x

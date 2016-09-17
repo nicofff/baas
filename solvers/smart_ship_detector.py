@@ -15,6 +15,10 @@ DESTROY_RIGHT = 1
 DESTROY_UP = 2
 DESTROY_DOWN = 3
 
+ships = {
+	
+}
+
 class SmartSolver(base.BaseSolver):
 
 	def mark_tile_used(self,tile):
@@ -31,6 +35,10 @@ def play_game(bs_game,solver):
 	limit = 100
 	mode = SEARCH_MODE
 	for turn in xrange(limit):
+
+
+
+
 		tile = solver.get_random_target()
 		#print tile
 		ret = bs_game.play_turn(tile)
