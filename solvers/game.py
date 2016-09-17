@@ -64,12 +64,12 @@ class BattleshipGame():
 
 			ret = {'code':STATE_HIT,'message':"Hit"}
 
-			if (np.array_equal(np.logical_and(self.hits,base_board),base_board)):
+			if (np.count_nonzero(np.logical_and(self.hits,base_board))==self.remaining_sizes[ix]):
 				ret = {'code':STATE_HIT,'message':"Sunk"}
 				del self.base_boards[ix]
 				del self.remaining_sizes[ix]
 
-				if (np.array_equal(np.logical_and(self.hits,self.board),self.board)):
+				if (np.count_nonzero(np.logical_and(self.hits,self.board))==17):
 					ret = {'code':STATE_GAME_OVER,'message':"Game Over"}
 			
 			return ret
