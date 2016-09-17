@@ -1,35 +1,46 @@
 import random
-from lib import helpers
+from lib import helpers2
+import numpy as np
 
-BOARD_SIZE = helpers.BOARD_SIZE
-SHIP_SIZES = helpers.SHIP_SIZES
+BOARD_SIZE = helpers2.BOARD_SIZE
+SHIP_SIZES = helpers2.SHIP_SIZES
 
 STATE_GAME_OVER = -1
 STATE_MISS = 0
 STATE_HIT = 1
 
-shipBoards = helpers.get_ship_boards()
+shipBoards = helpers2.get_ship_positions()
 
 class BattleshipGame():
 	def __init__(self):		
 
 		while(True):
-			s0 = random.choice(shipBoards[0])[:]
-			s1 = random.choice(shipBoards[1])[:]
-			s2 = random.choice(shipBoards[2])[:]
-			s3 = random.choice(shipBoards[3])[:]
-			s4 = random.choice(shipBoards[4])[:]
-			b = sorted(s0+s1+s2+s3+s4)
+			s0 = random.choice(shipBoards[0])
+			s1 = random.choice(shipBoards[1])
 
+			sp = np.logical_or(s0,s1)
+			if (np.count_nonzero(sp)!=9):
+				continue
 
-			for ix in range(len(b)-1):
-				if b[ix] == b[ix+1]:
-					break
-			else:
-				self.board = b
-				self.remaining_sizes = SHIP_SIZES[:]
-				self.base_boards = [s0,s1,s2,s3,s4]
-				break
+			s2 = random.choice(shipBoards[2])
+			sp = np.logical_or(sp,s2)
+			if (np.count_nonzero(sp)!=12):
+				continue
+
+			s3 = random.choice(shipBoards[3])
+			sp = np.logical_or(sp,s3)
+			if (np.count_nonzero(sp)!=15):
+				continue
+
+			s4 = random.choice(shipBoards[4])
+			sp = np.logical_or(sp,s4)
+			if (np.count_nonzero(sp)!=17):
+				continue
+		
+			self.board = sp
+			#print sp.astype(np.int)
+			self.remaining_sizes = SHIP_SIZES[:]
+			self.base_boards = [s0,s1,s2,s3,s4]
 
 	def get_remaining_sizes(self):
 		return self.get_remaining_sizes
