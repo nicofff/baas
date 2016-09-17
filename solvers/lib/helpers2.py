@@ -22,7 +22,7 @@ def posible_positions_for_ship(size):
 		for shipTile in range(size):
 			baseColumn[offset+shipTile] = True
 
-		#Now place that in every column an rom
+		#Now place that in every column an row
 		for index in range(BOARD_SIZE):
 			position = np.copy(emptyBoard)
 			position[index]=baseColumn

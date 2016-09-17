@@ -1,6 +1,5 @@
 import base_solver as base
 import game
-from lib import helpers
 
 
 STATE_MISS = 0
@@ -29,7 +28,7 @@ def play_game(bs_game,solver):
 		#solver.mark_tile_used(tile)
 		#print ret
 		if (ret["code"] == -1):
-			print(turn +1)
+			#print(turn +1)
 			return
 
 
@@ -42,4 +41,4 @@ for x in xrange(rounds):
 	bs_game = game.BattleshipGame()
 	solver.reset()
 	play_game(bs_game,solver)
-	print x
+	#print x

@@ -15,34 +15,20 @@ class BattleshipGame():
 	def __init__(self):		
 
 		while(True):
-			s0 = random.choice(shipBoards[0])
-			s1 = random.choice(shipBoards[1])
+			board = np.zeros((BOARD_SIZE,BOARD_SIZE),dtype=np.bool)
+			self.base_boards = []
+			for x in range(len(SHIP_SIZES)):
+				ship = random.choice(shipBoards[x])
+				self.base_boards.append(ship)
+				board = np.logical_or(board,ship)
 
-			sp = np.logical_or(s0,s1)
-			if (np.count_nonzero(sp)!=9):
-				continue
-
-			s2 = random.choice(shipBoards[2])
-			sp = np.logical_or(sp,s2)
-			if (np.count_nonzero(sp)!=12):
-				continue
-
-			s3 = random.choice(shipBoards[3])
-			sp = np.logical_or(sp,s3)
-			if (np.count_nonzero(sp)!=15):
-				continue
-
-			s4 = random.choice(shipBoards[4])
-			sp = np.logical_or(sp,s4)
-			if (np.count_nonzero(sp)!=17):
-				continue
+			if (np.count_nonzero(sp)==17):
+				break
 			
-			break
 
-		self.board = sp
+		self.board = board
 		#print sp.astype(np.int)
 		self.remaining_sizes = SHIP_SIZES[:]
-		self.base_boards = [s0,s1,s2,s3,s4]
 		self.hits = np.zeros((BOARD_SIZE,BOARD_SIZE),dtype=np.bool)
 
 
