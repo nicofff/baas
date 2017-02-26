@@ -15,21 +15,21 @@ class BattleshipGame():
 	def __init__(self):		
 
 		while(True):
-			board = np.zeros((BOARD_SIZE,BOARD_SIZE),dtype=np.bool)
-			self.base_boards = []
+			#print "loop"
+			shipPositions = []
+			board = np.zeros((BOARD_SIZE,BOARD_SIZE),dtype=np.int)
 			for x in range(len(SHIP_SIZES)):
 				ship = random.choice(shipBoards[x])
-				self.base_boards.append(ship)
-				board = np.logical_or(board,ship)
+				shipPositions.append(ship)
+				board += ship * (x+1)
 
-			if (np.count_nonzero(sp)==17):
+			if (np.count_nonzero(board)==17):
 				break
 			
+		self.board=board
+		self.shipPositions= shipPositions
 
-		self.board = board
-		#print sp.astype(np.int)
-		self.remaining_sizes = SHIP_SIZES[:]
-		self.hits = np.zeros((BOARD_SIZE,BOARD_SIZE),dtype=np.bool)
+		self.notHits = np.ones((BOARD_SIZE,BOARD_SIZE),dtype=np.bool)
 
 
 	def get_remaining_sizes(self):
@@ -39,31 +39,21 @@ class BattleshipGame():
 		#assert(self.played[x][y]==0)
 		#print self.base_boards
 		row,column = tile
-		if (not self.board[row][column]):
+		value = self.board[row][column]
+		if (not value):
 			return  {'code':STATE_MISS,'message':"Miss"}
 			
 
-		self.hits[row][column] = True
-		for ix, base_board in enumerate(self.base_boards):
-			if (not base_board[row,column]):
-				continue
+		self.notHits[row][column] = False
 
-			ret = {'code':STATE_HIT,'message':"Hit"}
+		ret = {'code':STATE_HIT,'message':"Hit"}
+		shipHit = self.shipPositions[value-1]
+		if (np.count_nonzero(shipHit * self.notHits)==0):
+			ret = {'code':STATE_HIT,'message':"Sunk"}
 
-			if (np.count_nonzero(np.logical_and(self.hits,base_board))==self.remaining_sizes[ix]):
-				ret = {'code':STATE_HIT,'message':"Sunk"}
-				del self.base_boards[ix]
-				del self.remaining_sizes[ix]
+		if (np.count_nonzero(self.notHits)==83):
+			ret = {'code':STATE_GAME_OVER,'message':"Game Over"}
 
-				if (np.count_nonzero(np.logical_and(self.hits,self.board))==17):
-					ret = {'code':STATE_GAME_OVER,'message':"Game Over"}
-			
-			return ret
-
-		
-		
-
-
-
+		return ret
 
 

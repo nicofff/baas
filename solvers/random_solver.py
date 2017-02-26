@@ -13,10 +13,8 @@ class RandomSolver(base.BaseSolver):
 		self.remaining_tiles.remove(tile)
 
 	def get_next_target(self):
-		ret = self.tiles[self.turn]
 		self.turn+=1
-		return ret
-		
+		return self.tiles[self.turn -1]		
 		
 
 def play_game(bs_game,solver):
