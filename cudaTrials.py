@@ -26,7 +26,6 @@ def int2BoolArray(boolArray):
 	ret = []
 	for array in boolArray:
 		ret.append(np.unpackbits(array).astype(np.uint64))
-
 	return ret
 
 def filterInvalid(current_state,board_array):
@@ -76,7 +75,7 @@ def interpolate(bs1,bs2):
 	* Returns all zeros otherwise
 	**/ 
 
-	__kernel void sum(__global const long2 *v1,__global const long2 *v2, __global const long2 *current_state, uint v1_index, __global long2 *sum_g) {
+	__kernel void sum(__global const long2 *v1,__global const long2 *v2, __global const long2 *current_state, uint v1_index, __global long2 *sum_g,__global char *flag_g) {
 
 	    int work_item = get_global_id(0);
 	    int array_position = work_item;
@@ -89,6 +88,7 @@ def interpolate(bs1,bs2):
 		long2 non_matching_hits;
 		long2 invalid_local;
 		long2 sum;
+		char flag = 1;
 		// For x
 	    result.x = v1_local.x | v2_local.x;
 	    overlapping.x = v1_local.x & v2_local.x;
@@ -108,9 +108,13 @@ def interpolate(bs1,bs2):
 	    if (invalid != 0){
 	    	result.x = 0;
 	    	result.y = 0;
+	    	flag = 0;
+
 	    }
 
 	    sum_g[ work_item] = result;
+	    flag_g[work_item] = flag;
+	    
 	    
 	    
 	}
@@ -145,6 +149,7 @@ def interpolate(bs1,bs2):
 	""").build()
 	queue = cl.CommandQueue(ctx)
 	mf = cl.mem_flags
+	print(mf)
 	total = 0
 	valid = 0
 
@@ -174,28 +179,40 @@ def interpolate(bs1,bs2):
 	print workSize
 
 	sum_result_np = np.empty([workSize,16]).astype(np.uint8)
-	sum_result_np_g = cl.Buffer(ctx, mf.WRITE_ONLY, sum_result_np.nbytes)
+	sum_result_np_g = cl.Buffer(ctx, mf.WRITE_ONLY | mf.HOST_READ_ONLY, sum_result_np.nbytes)
+
+	sum_flag_np = np.empty([workSize,]).astype(np.uint8)
+	sum_flag_np_g = cl.Buffer(ctx, mf.WRITE_ONLY | mf.HOST_READ_ONLY, sum_result_np.nbytes)
 
 	count_matrix = np.zeros([1024,128]).astype(np.uint64)
 	count_matrix_g = cl.Buffer(ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=count_matrix)
-	print_limit = 1
+	print_limit = 0.01
 	for step in xrange(iterations):
 	#for step in xrange(1000):
+		print(step)
 		tested = float(step)/(iterations)*100
 		if tested > print_limit:
 			print "Tested: " + str(tested) + "%"
-			print_limit+=1
+			print_limit+=0.01
 
-		prg.sum(queue, (workSize,), None, s2_g, s1_g, current_state_g, np.uint32(step), sum_result_np_g);
-		# cl.enqueue_copy(queue, sum_result_np,sum_result_np_g)
+		if step == 0:
+			prg.sum(queue, (workSize,), None, s2_g, s1_g, current_state_g, np.uint32(step), sum_result_np_g,sum_flag_np_g);
+		cl.enqueue_copy(queue, sum_result_np,sum_result_np_g)
+		cl.enqueue_copy(queue, sum_flag_np,sum_flag_np_g)
+		if step < iterations -1:
+			prg.sum(queue, (workSize,), None, s2_g, s1_g, current_state_g, np.uint32(step + 1), sum_result_np_g,sum_flag_np_g);
+		out = [sum_result_np[ix] for ix in xrange(len(sum_result_np)) if sum_flag_np[ix]]
+		np.save("out/"+str(step)+".npy",out)
+	assert(False)
 		# ix = random.randint(0,workSize-1)
 		# print np.resize(np.unpackbits(bs2[step]),(10,10))
 		# print np.resize(np.unpackbits(bs1[ix]),(10,10))
 		# this = np.resize(sum(int2BoolArray(sum_result_np)),(10,10))
 		# print this
-		prg.matrix_count(queue, (16*1024,), None, sum_result_np_g, np.uint32(workSize),count_matrix_g);
+		#prg.matrix_count(queue, (16*1024,), None, sum_result_np_g, np.uint32(workSize),count_matrix_g);
 		#break
 
+	assert(False)
 	cl.enqueue_copy(queue, count_matrix, count_matrix_g)
 	#print  np.resize(count_matrix[511],(10,10))
 	total_matrix = np.resize(sum(count_matrix),(10,10))
